@@ -20,7 +20,7 @@ mongoose.connect(mongoUri)
   .then(() => console.log("MongoDB conectado"))
   .catch(err => console.error(err));
 
-// Rutas
+// Ruta
 app.use('/api/products', require('./routes/productRoutes'));
 
 const PORT = process.env.PORT || 4000;

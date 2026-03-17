@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="es" ng-app="catalogoApp">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catalogo de Belleza</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+
+<body ng-controller="ProductController as vm">
+
+  <!-- ═══ NAVBAR ══════════════════════════════════════════════════════ -->
+  <nav class="green darken-3">
+    <div class="nav-wrapper container">
+      <a href="#!" class="brand-logo">
+        <i class="material-icons">spa</i> Catalogo Belleza
+      </a>
+      <ul class="right">
+        <li ng-class="{'active-nav': vm.activeTab === 'inicio'}">
+          <a href="#!" ng-click="vm.setTab('inicio')">
+            <i class="material-icons left">home</i>Inicio
+          </a>
+        </li>
+        <li ng-class="{'active-nav': vm.activeTab === 'inventario'}">
+          <a href="#!" ng-click="vm.setTab('inventario')">
+            <i class="material-icons left">list_alt</i>Inventario
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ═══ TAB: INICIO ═════════════════════════════════════════════════ -->
+  <main class="container section" ng-show="vm.activeTab === 'inicio'">
+    <div class="row">
+
+      <!-- ── Formulario ──────────────────────────────── -->
+      <div class="col s12 m5 l4">
+        <div class="card-panel">
+          <p class="form-title">
+            <i class="material-icons tiny">{{ vm.isEditing ? 'edit' : 'add_circle' }}</i>
+            {{ vm.isEditing ? 'Editar producto' : 'Nuevo producto' }}
+          </p>
+
+          <form ng-submit="vm.saveProduct()" novalidate>
+
+            <div class="input-field">
+              <input id="nombre" type="text" ng-model="vm.formData.nombre" required maxlength="100">
+              <label for="nombre" class="active">Nombre del producto *</label>
+            </div>
+
+            <label class="field-label">Marca *</label>
+            <input type="text" class="search-select-input" ng-model="vm.marcaSearch"
+                   placeholder="Buscar marca...">
+            <select class="field-select browser-default" ng-model="vm.formData.marca" required
+                    ng-options="m as m for m in (vm.marcas | filter:vm.marcaSearch)">
+              <option value="" disabled>Seleccione una marca</option>
+            </select>
+
+            <label class="field-label">Categoria *</label>
+            <input type="text" class="search-select-input" ng-model="vm.catSearch"
+                   placeholder="Buscar categoria...">
+            <select class="field-select browser-default" ng-model="vm.formData.categoria" required
+                    ng-options="c as c for c in (vm.categorias | filter:vm.catSearch)">
+              <option value="" disabled>Seleccione una categoria</option>
+            </select>
+
+            <div class="input-field">
+              <textarea id="descripcion" class="materialize-textarea"
+                        ng-model="vm.formData.descripcion" required maxlength="500"></textarea>
+              <label for="descripcion" class="active">Descripcion *</label>
+            </div>
+
+            <div class="row mb0">
+              <div class="col s6">
+                <div class="input-field">
+                  <input id="precio" type="number" min="0" step="1"
+                         ng-model="vm.formData.precio" required>
+                  <label for="precio" class="active">Precio (COP) *</label>
+                </div>
+              </div>
+              <div class="col s6">
+                <div class="input-field">
+                  <input id="stock" type="number" min="0" step="1"
+                         ng-model="vm.formData.stock" required>
+                  <label for="stock" class="active">Cantidad *</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="input-field">
+              <input id="fechaVenc" type="date" ng-model="vm.formData.fechaVencimiento">
+              <label for="fechaVenc" class="active">Fecha de Vencimiento</label>
+            </div>
+
+            <!-- Subida de imagen -->
+            <div class="image-upload-box">
+              <label class="field-label">Imagen del producto</label>
+              <div ng-if="vm.formData.imagen">
+                <img ng-src="{{ vm.formData.imagen }}" alt="Vista previa" class="preview-img">
+                <button type="button" class="btn-flat remove-img red-text"
+                        ng-click="vm.removeImage()">
+                  <i class="material-icons tiny">close</i> Quitar imagen
+                </button>
+              </div>
+              <div class="upload-placeholder" ng-if="!vm.formData.imagen">
+                <i class="material-icons">add_photo_alternate</i>
+                <span>Selecciona una imagen</span>
+              </div>
+              <input type="file" id="imagenFile" accept="image/*"
+                     file-model="vm.formData.imagen" class="file-input">
+              <label for="imagenFile" class="btn btn-flat upload-btn waves-effect">
+                <i class="material-icons left">upload</i>
+                {{ vm.formData.imagen ? 'Cambiar imagen' : 'Subir imagen' }}
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn waves-effect waves-light green darken-2"
+                      type="submit" ng-disabled="vm.loading">
+                <i class="material-icons left">{{ vm.isEditing ? 'save' : 'add' }}</i>
+                Guardar
+              </button>
+              <button class="btn-flat grey-text" type="button"
+                      ng-if="vm.isEditing" ng-click="vm.cancelEdit()">
+                Cancelar
+              </button>
+            </div>
+
+          </form>
+        </div><!-- card-panel -->
+      </div><!-- col formulario -->
+
+      <!-- ── Productos recientes ─────────────────────── -->
+      <div class="col s12 m7 l8">
+        <div class="card-panel">
+
+          <div class="section-header">
+            <span class="section-title">
+              <i class="material-icons tiny">schedule</i>
+              Productos registrados recientemente
+            </span>
+            <div class="row-filter">
+              <span>Mostrar</span>
+              <select class="page-select browser-default" ng-model="vm.pageSize">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="0">Todos</option>
+              </select>
+              <span>productos</span>
+            </div>
+          </div>
+
+          <div class="progress" ng-if="vm.loading">
+            <div class="indeterminate green"></div>
+          </div>
+
+          <div class="recent-grid" ng-if="!vm.loading && vm.getRecentProducts().length">
+            <div class="product-card"
+                 ng-repeat="p in vm.getRecentProducts() track by p._id">
+              <div class="product-img-wrap">
+                <img ng-src="{{ p.imagen || 'https://via.placeholder.com/300x200/e8f5e9/2e7d32?text=' + p.nombre }}"
+                     alt="{{ p.nombre }}" class="product-img">
+                <span class="marca-badge">{{ p.marca }}</span>
+              </div>
+              <div class="product-info">
+                <p class="product-name">{{ p.nombre }}</p>
+                <p class="product-cat">{{ p.categoria }}</p>
+                <p class="product-price">{{ p.precio | cop }}</p>
+                <p class="product-stock" ng-class="{'low-stock': p.stock <= 5}">
+                  Stock: {{ p.stock }}
+                </p>
+              </div>
+              <div class="product-actions">
+                <button class="btn-small green darken-1" ng-click="vm.editProduct(p)">
+                  <i class="material-icons">edit</i>
+                </button>
+                <button class="btn-small red" ng-click="vm.deleteProduct(p._id)">
+                  <i class="material-icons">delete</i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="empty-state" ng-if="!vm.loading && !vm.products.length">
+            <i class="material-icons large">inventory_2</i>
+            <p>No hay productos registrados aun.<br>Crea el primero con el formulario.</p>
+          </div>
+
+          <p class="total-info" ng-if="vm.products.length">
+            Mostrando {{ vm.getRecentProducts().length }} de {{ vm.products.length }} productos
+          </p>
+
+        </div><!-- card-panel -->
+      </div><!-- col recientes -->
+
+    </div><!-- row -->
+  </main>
+
+  <!-- ═══ TAB: INVENTARIO ═════════════════════════════════════════════ -->
+  <main class="container section" ng-show="vm.activeTab === 'inventario'">
+    <div class="card-panel">
+
+      <div class="inventory-header">
+        <h5><i class="material-icons left">inventory_2</i>Inventario de Productos</h5>
+
+        <div class="filter-row">
+          <!-- Buscar por nombre -->
+          <div class="input-field" style="flex:2;min-width:180px;margin:0">
+            <i class="material-icons prefix">search</i>
+            <input id="buscar" type="text"
+                   ng-model="vm.searchText"
+                   placeholder="Filtrar por nombre...">
+          </div>
+          <!-- Filtro marca -->
+            <select class="field-select browser-default" ng-model="vm.marcaFilter"
+              style="flex:1;min-width:140px;margin:0"
+              ng-options="m as m for m in vm.marcas">
+            <option value="">Todas las marcas</option>
+          </select>
+          <!-- Filtro categoria -->
+            <select class="field-select browser-default" ng-model="vm.catFilter"
+              style="flex:1;min-width:150px;margin:0"
+              ng-options="c as c for c in vm.categorias">
+            <option value="">Todas las categorias</option>
+          </select>
+          <button class="btn-flat green-text" ng-click="vm.clearFilters()">
+            <i class="material-icons left">clear</i>Limpiar
+          </button>
+        </div>
+      </div><!-- inventory-header -->
+
+      <div class="progress" ng-if="vm.loading">
+        <div class="indeterminate green"></div>
+      </div>
+
+      <!-- Tabla -->
+      <div class="table-responsive" ng-if="!vm.loading && vm.getFiltered().length">
+        <table class="inventory-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Marca</th>
+              <th>Categoria</th>
+              <th>Cantidad</th>
+              <th>Precio</th>
+              <th>Fecha Vencimiento</th>
+              <th class="center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-repeat="p in vm.getFiltered() track by p._id"
+                ng-class="{'low-row': p.stock <= 5}">
+              <td>
+                <div class="product-name-cell" ng-if="vm.inventoryEditingId !== p._id">
+                  <img ng-src="{{ p.imagen || 'https://via.placeholder.com/40x40/e8f5e9/2e7d32?text=' + p.nombre.charAt(0) }}"
+                       class="table-thumb" alt="">
+                  {{ p.nombre }}
+                </div>
+                <input ng-if="vm.inventoryEditingId === p._id"
+                       type="text"
+                       class="inline-edit-input browser-default"
+                       ng-model="vm.inventoryEditData.nombre">
+              </td>
+              <td ng-if="vm.inventoryEditingId !== p._id">{{ p.marca }}</td>
+              <td ng-if="vm.inventoryEditingId === p._id">
+                <select class="inline-edit-select browser-default"
+                        ng-model="vm.inventoryEditData.marca"
+                        ng-options="m as m for m in vm.marcas">
+                  <option value="">Seleccione marca</option>
+                </select>
+              </td>
+              <td ng-if="vm.inventoryEditingId !== p._id"><span class="cat-chip">{{ p.categoria }}</span></td>
+              <td ng-if="vm.inventoryEditingId === p._id">
+                <select class="inline-edit-select browser-default"
+                        ng-model="vm.inventoryEditData.categoria"
+                        ng-options="c as c for c in vm.categorias">
+                  <option value="">Seleccione categoria</option>
+                </select>
+              </td>
+              <td ng-if="vm.inventoryEditingId !== p._id" ng-class="{'red-text': p.stock <= 5}"><strong>{{ p.stock }}</strong></td>
+              <td ng-if="vm.inventoryEditingId === p._id">
+                <input type="number" min="0" step="1"
+                       class="inline-edit-input browser-default"
+                       ng-model="vm.inventoryEditData.stock">
+              </td>
+              <td ng-if="vm.inventoryEditingId !== p._id"><strong>{{ p.precio | cop }}</strong></td>
+              <td ng-if="vm.inventoryEditingId === p._id">
+                <input type="number" min="0" step="1"
+                       class="inline-edit-input browser-default"
+                       ng-model="vm.inventoryEditData.precio">
+              </td>
+              <td ng-if="vm.inventoryEditingId !== p._id">{{ p.fechaVencimiento ? (p.fechaVencimiento | date:'yyyy-MM-dd') : '-' }}</td>
+              <td ng-if="vm.inventoryEditingId === p._id">
+                <input type="date"
+                       class="inline-edit-input browser-default"
+                       ng-model="vm.inventoryEditData.fechaVencimiento">
+              </td>
+              <td>
+                <div class="table-actions" ng-if="vm.inventoryEditingId !== p._id">
+                  <button class="btn-small green darken-1"
+                          ng-click="vm.editProduct(p)">EDITAR</button>
+                  <button class="btn-small red"
+                          ng-click="vm.deleteProduct(p._id)">ELIMINAR</button>
+                </div>
+                <div class="table-actions" ng-if="vm.inventoryEditingId === p._id">
+                  <button class="btn-small green darken-1"
+                          ng-click="vm.saveInventoryEdit()">
+                    <i class="material-icons left tiny">save</i>Guardar
+                  </button>
+                  <button class="btn-small grey"
+                          ng-click="vm.cancelInventoryEdit()">Cancelar</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="inventory-footer" ng-if="vm.getFiltered().length">
+        Total: <strong>{{ vm.getFiltered().length }}</strong> productos
+        <span ng-if="vm.searchText || vm.marcaFilter || vm.catFilter">
+          (de {{ vm.products.length }} en total)
+        </span>
+      </p>
+
+      <div class="empty-state" ng-if="!vm.loading && !vm.getFiltered().length">
+        <i class="material-icons large">search_off</i>
+        <p ng-if="vm.products.length">
+          No se encontraron productos con los filtros aplicados.
+        </p>
+        <p ng-if="!vm.products.length">
+          El inventario esta vacio. Crea productos desde la pestana Inicio.
+        </p>
+      </div>
+
+    </div><!-- card-panel -->
+  </main>
+
+  <!-- Scripts -->
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script src="app/app.module.js"></script>
+  <script src="app/services/product.service.js"></script>
+  <script src="app/controllers/product.controller.js"></script>
+</body>
+</html>
